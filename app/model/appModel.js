@@ -15,6 +15,140 @@ async function asyncForEach(array, callback) {
   }
 }
 
+function getRekapOperator(sd, ed, callback){
+    let p = new Promise(function(resolve, reject){
+    var txt = "SELECT d.id_dokter as id, d.nama_dokter as nama, ";
+        txt += " ( ";
+        txt += "     select count(*) from td_ok_biaya bb  ";
+        txt += "     JOIN td_register_ok o ON o.id_ok = bb.td_register_ok_id ";
+        txt += "     WHERE o.tgl_operasi between '"+sd+"' and '"+ed+"' AND b.dr_operator = bb.dr_operator ";
+        txt += " ) as total ";
+        txt += " FROM td_ok_biaya b  ";
+        txt += " JOIN dm_dokter d ON b.dr_operator = d.id_dokter ";
+        txt += " JOIN td_register_ok ok ON ok.id_ok = b.td_register_ok_id ";
+        txt += " WHERE ok.tgl_operasi between '"+sd+"' and '"+ed+"' ";
+        txt += " GROUP BY d.id_dokter ORDER BY total DESC ";
+
+        sql.query(txt,[],function(err, res){
+            if(err)
+                reject(err);
+            else
+                resolve(res);
+        });
+    });
+
+    p.then(result =>{
+        callback(null,result);
+    })
+    .catch(err=>{
+        console.log(err);
+        callback(err,null);
+    });
+}
+
+function getRekapAnastesi(sd, ed, callback){
+    let p = new Promise(function(resolve, reject){
+    var txt = "SELECT ok.upf,u.nama,";
+        txt += "(";
+        txt += "    SELECT count(*) FROM td_register_ok ri ";
+        txt += "    JOIN dm_ok_anastesi an ON an.id = ri.jenis_anastesi    ";
+        txt += "    WHERE an.kode = 'LA' AND ok.upf = ri.upf AND tgl_operasi between '"+sd+"' and '"+ed+"'";
+        txt += ") as la ,";
+        txt += "(";
+        txt += "    SELECT count(*) FROM td_register_ok ri ";
+        txt += "    JOIN dm_ok_anastesi an ON an.id = ri.jenis_anastesi    ";
+        txt += "    WHERE an.kode = 'SAB' AND ok.upf = ri.upf AND tgl_operasi between '"+sd+"' and '"+ed+"'";
+        txt += ") as sab,";
+        txt += "(";
+        txt += "    SELECT count(*) FROM td_register_ok ri ";
+        txt += "    JOIN dm_ok_anastesi an ON an.id = ri.jenis_anastesi    ";
+        txt += "    WHERE an.kode = 'GA' AND ok.upf = ri.upf AND tgl_operasi between '"+sd+"' and '"+ed+"'";
+        txt += ") as ga,";
+        txt += "(";
+        txt += "    SELECT count(*) FROM td_register_ok ri ";
+        txt += "    JOIN dm_ok_anastesi an ON an.id = ri.jenis_anastesi    ";
+        txt += "    WHERE an.kode = 'EPI' AND ok.upf = ri.upf AND tgl_operasi between '"+sd+"' and '"+ed+"'";
+        txt += ") as epi,";
+        txt += "(";
+        txt += "    SELECT count(*) FROM td_register_ok ri ";
+        txt += "    JOIN dm_ok_anastesi an ON an.id = ri.jenis_anastesi    ";
+        txt += "    WHERE an.kode = 'PER' AND ok.upf = ri.upf AND tgl_operasi between '"+sd+"' and '"+ed+"' ";
+        txt += ") as per ";
+        txt += "    FROM td_register_ok ok ";
+        txt += "    JOIN td_upf u ON u.id = ok.upf  GROUP BY ok.upf ";
+
+        sql.query(txt,[],function(err, res){
+            if(err)
+                reject(err);
+            else
+                resolve(res);
+        });
+    });
+
+    p.then(result =>{
+        callback(null,result);
+    })
+    .catch(err=>{
+        console.log(err);
+        callback(err,null);
+    });
+}
+
+function getCitoElektif(sd, ed, callback){
+    let p = new Promise(function(resolve, reject){
+    var txt = "SELECT ok.upf,u.nama, (SELECT count(*) FROM td_register_ok ri  ";
+        txt += " JOIN dm_ok_tindakan dot ON dot.id = ri.tindakan   ";
+        txt += " JOIN dm_ok_jenis_tindakan dojt ON dojt.id = dot.dm_ok_jenis_tindakan_id   ";
+        txt += " WHERE dojt.nama = 'CITO' AND ok.upf = ri.upf AND tgl_operasi between '"+sd+"' and '"+ed+"') as cito, ";
+        txt += " (SELECT count(*) FROM td_register_ok ri  ";
+        txt += " JOIN dm_ok_tindakan dot ON dot.id = ri.tindakan   ";
+        txt += " JOIN dm_ok_jenis_tindakan dojt ON dojt.id = dot.dm_ok_jenis_tindakan_id   ";
+        txt += " WHERE dojt.nama = 'ELEKTIF' AND ok.upf = ri.upf AND tgl_operasi between '"+sd+"' and '"+ed+"') as elektif ";
+        txt += " FROM td_register_ok ok ";
+        txt += " JOIN td_upf u ON u.id = ok.upf ";
+        txt += " GROUP BY ok.upf ";
+
+        sql.query(txt,[],function(err, res){
+            if(err)
+                reject(err);
+            else
+                resolve(res);
+        });
+    });
+
+    p.then(result =>{
+        callback(null,result);
+    })
+    .catch(err=>{
+        console.log(err);
+        callback(err,null);
+    });
+}
+
+function getJasaRS(sd, ed,callback){
+
+    let p = new Promise(function(resolve, reject){
+    var txt = "SELECT SUM(total) as total FROM (SELECT (SELECT SUM((biaya_jrs)) "; 
+        txt += " FROM td_ok_biaya WHERE td_register_ok_id = m.id_ok) as total";
+        txt += " FROM td_register_ok AS m WHERE m.tgl_operasi BETWEEN ? AND ? ) as t";
+        sql.query(txt,[sd, ed],function(err, res){
+            if(err)
+                reject(err);
+            else
+                resolve(res[0].total);
+        });
+    });
+
+    p.then(result =>{
+        callback(null,result);
+    })
+    .catch(err=>{
+        console.log(err);
+        callback(err,null);
+    });
+    
+}
+
 function getRekapTindakanOperasi(sd,ed, callback){
     let p = new Promise(function(resolve, reject){
         var txt = "SELECT u.nama,b.dr_operator, d.nama_dokter, ";
@@ -227,4 +361,8 @@ txt += "GROUP BY u.nama,b.dr_operator,d.nama_dokter ORDER BY u.nama; ";
 
 
 Operasi.getRekapTindakanOperasi = getRekapTindakanOperasi;
+Operasi.getJasaRS = getJasaRS;
+Operasi.getCitoElektif = getCitoElektif;
+Operasi.getRekapAnastesi = getRekapAnastesi;
+Operasi.getRekapOperator = getRekapOperator;
 module.exports= Operasi;
