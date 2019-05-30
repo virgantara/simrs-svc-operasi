@@ -4,6 +4,16 @@ var Operasi = require('../model/appModel.js');
 
 var response = require('../../res.js');
 
+exports.getTotalOperasiTahun = function(req, res) {
+  Operasi.getTotalOperasiTahun(req.query.sd, req.query.ed,function(err, values) {
+    if (err)
+      res.send(err);
+
+    response.ok(values, res);
+
+  });
+};
+
 exports.getRekapOperator = function(req, res) {
   Operasi.getRekapOperator(req.query.sd, req.query.ed,function(err, values) {
     if (err)

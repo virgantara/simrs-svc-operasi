@@ -15,6 +15,27 @@ async function asyncForEach(array, callback) {
   }
 }
 
+function getTotalOperasiTahun(sd, ed, callback){
+    let p = new Promise(function(resolve, reject){
+    var txt = "select count(*) as total from td_register_ok ok where tgl_operasi between ? AND ? ; ";
+        
+        sql.query(txt,[sd, ed],function(err, res){
+            if(err)
+                reject(err);
+            else
+                resolve(res[0]);
+        });
+    });
+
+    p.then(result =>{
+        callback(null,result);
+    })
+    .catch(err=>{
+        console.log(err);
+        callback(err,null);
+    });
+}
+
 function getRekapOperator(sd, ed, callback){
     let p = new Promise(function(resolve, reject){
     var txt = "SELECT d.id_dokter as id, d.nama_dokter as nama, ";
@@ -365,4 +386,6 @@ Operasi.getJasaRS = getJasaRS;
 Operasi.getCitoElektif = getCitoElektif;
 Operasi.getRekapAnastesi = getRekapAnastesi;
 Operasi.getRekapOperator = getRekapOperator;
+Operasi.getTotalOperasiTahun = getTotalOperasiTahun;
+
 module.exports= Operasi;
